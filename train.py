@@ -14,6 +14,7 @@ parser.add_argument('--dataset', type=str, help='Set Data Path')
 parser.add_argument('--output', type=str, help='Set the output model path')
 parser.add_argument('--epochs', type=int, help='Set the number of epochs')
 parser.add_argument('--steps', type=int, help='Set the number of steps')
+parser.add_argument('--int8', action='store_true', help='Use INT8')
 args = parser.parse_args()
 
 if args.base_model:
@@ -163,6 +164,7 @@ trainer = transformers.Trainer(
         output_dir=OUTPUT_PATH,
         save_steps=200,
         save_total_limit=3,
+        optim="adamw_torch_fused",
     ),
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False),
 )
