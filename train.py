@@ -14,7 +14,6 @@ parser.add_argument('--dataset', type=str, help='Set Data Path')
 parser.add_argument('--output', type=str, help='Set the output model path')
 parser.add_argument('--epochs', type=int, help='Set the number of epochs')
 parser.add_argument('--steps', type=int, help='Set the number of steps')
-parser.add_argument('--int8', action='store_true', help='Use INT8')
 args = parser.parse_args()
 
 if args.base_model:
@@ -52,8 +51,7 @@ MICRO_BATCH_SIZE = 4
 BATCH_SIZE = 128
 GRADIENT_ACCUMULATION_STEPS = BATCH_SIZE // MICRO_BATCH_SIZE
 LEARNING_RATE = 1e-4
-#LEARNING_RATE = 0.0005
-CUTOFF_LEN = 512
+CUTOFF_LEN = 256
 LORA_R = 8
 LORA_ALPHA = 32
 LORA_DROPOUT = 0.05
@@ -74,7 +72,8 @@ if torch.cuda.is_available():
     else:
         print("Using Single GPU.")
         model = LlamaForCausalLM.from_pretrained(
-            BASE_MODEL
+            BASE_MODEL,
+            torch_dtype='auto'
         )
 
 amp_supported = torch.cuda.is_available() and hasattr(torch.cuda, "amp")
