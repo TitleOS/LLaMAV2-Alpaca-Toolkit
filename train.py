@@ -6,7 +6,7 @@ from datasets import load_dataset
 import transformers
 
 from transformers import LlamaForCausalLM, LlamaTokenizer
-from peft import LoraConfig, get_peft_model
+from peft import LoraConfig, get_peft_model, prepare_model_for_int8_training
 
 parser = argparse.ArgumentParser(description='Training script')
 parser.add_argument('--base-model', type=str, help='Set Base Model')
@@ -14,6 +14,7 @@ parser.add_argument('--dataset', type=str, help='Set Data Path')
 parser.add_argument('--output', type=str, help='Set the output model path')
 parser.add_argument('--epochs', type=int, help='Set the number of epochs')
 parser.add_argument('--steps', type=int, help='Set the number of steps')
+parser.add_argument('--int8', action='store_true', help='Enable int8 quantization')
 args = parser.parse_args()
 
 if args.base_model:
@@ -46,6 +47,12 @@ if args.steps:
 else:
     STEP_COUNT = 10000
     print("No step count provided, defaulting to 10k")
+if args.int8:
+    USE_INT8 = True
+    print(f"Using int8 quantization")
+else:
+    USE_INT8 = False
+    print("Not using int8 quantization")
 
 MICRO_BATCH_SIZE = 4
 BATCH_SIZE = 128
@@ -68,11 +75,13 @@ if torch.cuda.is_available():
         model = LlamaForCausalLM.from_pretrained(
             BASE_MODEL,
             device_map="auto",
+            load_in_8bit=USE_INT8,
         )
     else:
         print("Using Single GPU.")
         model = LlamaForCausalLM.from_pretrained(
-            BASE_MODEL
+            BASE_MODEL,
+            load_in_8bit=USE_INT8,
         )
 
 amp_supported = torch.cuda.is_available() and hasattr(torch.cuda, "amp")
@@ -99,15 +108,17 @@ tokenizer.add_special_tokens(
         }
     )
 
-
 config = LoraConfig(
-    r=LORA_R,
-    lora_alpha=LORA_ALPHA,
-    target_modules=["q_proj", "v_proj"],
-    lora_dropout=LORA_DROPOUT,
-    bias="none",
-    task_type="CAUSAL_LM",
-)
+        r=LORA_R,
+        lora_alpha=LORA_ALPHA,
+        target_modules=["q_proj", "v_proj"],
+        lora_dropout=LORA_DROPOUT,
+        bias="none",
+        task_type="CAUSAL_LM"
+        )
+if USE_INT8:
+    print("Preparing model for int8 training...")
+    model = prepare_model_for_int8_training(model)
 model = get_peft_model(model, config)
 
 
