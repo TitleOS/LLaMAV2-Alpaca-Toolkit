@@ -72,8 +72,7 @@ if torch.cuda.is_available():
     else:
         print("Using Single GPU.")
         model = LlamaForCausalLM.from_pretrained(
-            BASE_MODEL,
-            torch_dtype='auto'
+            BASE_MODEL
         )
 
 amp_supported = torch.cuda.is_available() and hasattr(torch.cuda, "amp")
